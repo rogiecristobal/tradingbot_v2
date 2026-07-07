@@ -58,7 +58,10 @@ class BybitExecutor:
         return self._wallet_balance
 
     def set_leverage(self, leverage: int) -> None:
-        self.exchange.set_leverage(leverage, self._market_id)
+        try:
+            self.exchange.set_leverage(leverage, self._market_id)
+        except Exception as e:
+            logger.warning("Could not set leverage to %dx (might already be set): %s", leverage, e)
 
     def calculate_qty(self, risk_pct: float, leverage: int, entry_price: float) -> float:
         risk_amount = self._wallet_balance * risk_pct / 100.0
