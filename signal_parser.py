@@ -167,8 +167,8 @@ def parse_signal(text: str) -> Signal | None:
             missing.append("sl_price")
         if signal.leverage is None:
             missing.append("leverage")
-        logger.debug("Parse failed — raw text: %r", text)
-        logger.debug("Parse failed — normalized: %r", normal)
-        logger.debug("Parse failed — missing: %s", ", ".join(missing))
+        logger.warning("Parse failed — raw text: %r", text)
+        logger.warning("Parse failed — normalized: %r", normal)
+        logger.warning("Parse failed — missing: %s", ", ".join(missing))
 
     return signal if signal.is_valid else None

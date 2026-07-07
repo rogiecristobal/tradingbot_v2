@@ -189,7 +189,7 @@ class BybitExecutor:
         )
 
     def _compute(self, signal, risk_pct: float) -> dict:
-        from parser import TP_DISTRIBUTION
+        from signal_parser import TP_DISTRIBUTION
 
         market_id = self._resolve_market(signal.symbol)
 
@@ -239,7 +239,7 @@ class BybitExecutor:
         return info
 
     def execute(self, signal, risk_pct: float = 3.0) -> dict:
-        from parser import TP_DISTRIBUTION
+        from signal_parser import TP_DISTRIBUTION
 
         market_id = self._resolve_market(signal.symbol)
         logger.info("Market resolved: %s", market_id)
