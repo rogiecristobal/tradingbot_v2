@@ -11,20 +11,10 @@ pkg install python git
 ```
 
 ## 3. Get the Bot Files
-On your phone, you have two options:
-
-### Option A — Copy files manually
-Use a USB cable or file-sharing app to copy the `CryptoBot` folder to your phone's storage, then in Termux:
-```bash
-cp -r /storage/emulated/0/CryptoBot ~/
-cd ~/CryptoBot
-```
-
-### Option B — Use Git (if you push to a private repo)
 ```bash
 cd ~
-git clone <your-repo-url> CryptoBot
-cd CryptoBot
+git clone <your-repo-url> tradingbot_v2
+cd tradingbot_v2
 ```
 
 ## 4. Install Dependencies
@@ -33,7 +23,6 @@ pip install -r requirements.txt
 ```
 
 ## 5. Configure .env
-Edit `.env` to match your Bybit credentials:
 ```bash
 nano .env
 ```
@@ -42,48 +31,37 @@ Set these values:
 ```
 BYBIT_API_KEY=your_bybit_api_key
 BYBIT_API_SECRET=your_bybit_api_secret
-BYBIT_TESTNET=true
+BYBIT_TESTNET=false
 RISK_PER_TRADE=3
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
 ```
 
-- **First time:** Keep `BYBIT_TESTNET=true` and test with play money
-- **Live trading:** Change to `BYBIT_TESTNET=false` when you're ready
-
-## 6. Run the Bot
+## 6. Run the Bot (in tmux — stays running in background)
 ```bash
-cd ~/CryptoBot
-python trade.py
+tmux new -s cryptobot
+python bot.py
 ```
 
-## 7. How to Use (Quick Flow)
-1. See a signal in your Telegram group
-2. **Copy the entire signal text** (long-press → Copy)
-3. Switch to Termux (the bot should be waiting)
-4. **Long-press** in Termux to paste the text
-5. Press **Enter**, then **Ctrl+D**
-6. Review the parsed signal preview
-7. Type `y` + Enter to execute the trade
-8. Done — the position is open on Bybit
+- **Detach** (bot keeps running): `Ctrl+B`, then `D`
+- **Re-attach**: `tmux attach -t cryptobot`
+- **Stop**: Re-attach then `Ctrl+C`
 
-## 8. Keeping the Bot Open (Optional)
-Instead of re-running `python trade.py` for each signal, you can keep it running:
+## 7. How to Use (Telegram)
 
-```bash
-# Run once, then paste new signals each time it prompts
-python trade.py
-```
+| You send... | Bot responds... |
+|---|---|
+| Signal text | Preview with **[Execute] [Cancel]** buttons |
+| Tap **Execute** | Trade placed on Bybit, confirmation shown |
+| Tap **Cancel** | Preview dismissed |
+| `/positions` | Live positions + **[Move SL to entry]** button |
+| `/history` | Trade history from logs |
+| `/watch` | Auto-move SL to entry after TP1 (background thread) |
+| `/cancel` | Cancel pending trade |
+| `/help` | Command list |
 
-Every time a trade completes, the script exits. Just run `python trade.py` again for the next signal.
-
-## 9. Bybit API Key Setup
+## 8. Bybit API Key Setup
 1. Go to Bybit → **API Management** → **Create API Key**
 2. Enable: **Read-Write**
-3. Enable: **Contract Trading**
+3. Enable: **Contract Trading** and **USDT perpetual**
 4. Save the API Key and Secret to `.env`
-
-## 10. Testnet (for testing)
-1. Go to https://testnet.bybit.com
-2. Create an account (separate from main Bybit)
-3. Create API keys from testnet dashboard
-4. Use those keys with `BYBIT_TESTNET=true`
-5. Get free test USDT from the faucet
