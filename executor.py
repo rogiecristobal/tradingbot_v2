@@ -102,7 +102,8 @@ class BybitExecutor:
         if self._wallet_balance is None or self._wallet_balance <= 0:
             warnings.append("Wallet balance is 0 or could not be fetched")
 
-        min_cost = market.get('limits', {}).get('cost', {}).get('min', 0)
+        raw_min = market.get('limits', {}).get('cost', {}).get('min')
+        min_cost = float(raw_min) if raw_min else 0
         position_value = total_qty * entry_price
         if min_cost > 0 and position_value < min_cost:
             warnings.append(
