@@ -13,6 +13,8 @@ _RE_SYMBOL = re.compile(
     r'\$?([A-Z0-9]{2,})\s*/\s*(USDT|BTC|ETH)\s*\((LONG|SHORT)\)',
     re.IGNORECASE,
 )
+_RE_SYMBOL_BARE = re.compile(r'([A-Z0-9]{2,})\s*/\s*(USDT|BTC|ETH)', re.IGNORECASE)
+_RE_DIRECTION = re.compile(r'^\s*(LONG|SHORT)\s*$', re.IGNORECASE)
 _RE_ENTRY = re.compile(r'entry\s*:\s*(.+)', re.IGNORECASE)
 _RE_TP = re.compile(r'TP\s*(\d+)\s*:\s*\$?\s*([\d.]+)', re.IGNORECASE)
 _RE_TP_MOON = re.compile(r'TP\s*(\d+)\s*:\s*(🚀)', re.IGNORECASE)
@@ -77,6 +79,18 @@ def parse_signal(text: str) -> Signal | None:
             signal.symbol = f"{m.group(1).upper()}/{m.group(2).upper()}"
             signal.direction = m.group(3).upper()
             continue
+
+        if signal.symbol is None:
+            m = _RE_SYMBOL_BARE.search(line)
+            if m:
+                signal.symbol = f"{m.group(1).upper()}/{m.group(2).upper()}"
+                continue
+
+        if signal.direction is None:
+            m = _RE_DIRECTION.search(line)
+            if m:
+                signal.direction = m.group(1).upper()
+                continue
 
         m = _RE_ENTRY.search(line)
         if m:
