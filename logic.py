@@ -91,7 +91,7 @@ def execute_trade(signal_text: str) -> tuple:
 def format_execution_result(signal, result: dict, trade_id: str) -> str:
     entry = result['entry']
     fill = entry.get('price') or result.get('entry_price', 0)
-    qty = entry.get('filled') or entry.get('amount') or 0
+    qty = entry.get('amount') or result.get('entry_qty', 0)
 
     lines = [
         "✅ *Trade Executed*",
@@ -105,8 +105,13 @@ def format_execution_result(signal, result: dict, trade_id: str) -> str:
         if 'error' in tp:
             lines.append(f"  TP{tp['tp']}: ❌ {tp['error']}")
         else:
-            o = tp['order']
-            lines.append(f"  TP{tp['tp']}: ✅ @ ${o.get('price', '?')}  (ID: {str(o.get('id', '?'))[:10]}..)")
+            price = tp.get('price')
+            if price is None:
+                price = tp['order'].get('price')
+            if isinstance(price, (int, float)):
+                lines.append(f"  TP{tp['tp']}: ✅ @ ${price:.4f}  (ID: {str(tp['order'].get('id', '?'))[:10]}..)")
+            else:
+                lines.append(f"  TP{tp['tp']}: ✅ @ signal price  (ID: {str(tp['order'].get('id', '?'))[:10]}..)")
 
     if signal.has_moon:
         lines.append(f"  TP{signal.tp_count}: 🚀 moon bag — no auto-close")

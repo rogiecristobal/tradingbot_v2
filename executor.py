@@ -127,8 +127,8 @@ class BybitExecutor:
                 'category': 'linear',
                 'symbol': market['id'],
             })
-        except Exception:
-            warnings.append(f"Could not verify {signal.symbol} on Bybit")
+        except Exception as e:
+            logger.debug("Could not verify market instrument: %s", e)
 
         return warnings
 
@@ -275,7 +275,7 @@ class BybitExecutor:
         logger.info("Entry order placed: %s", entry_result.get('id', 'unknown'))
 
         results = {'entry': entry_result, 'tps': [], 'warnings': warnings,
-                   'entry_price': entry_price}
+                   'entry_price': entry_price, 'entry_qty': total_qty}
 
         sorted_tps = sorted(signal.tp_prices.items())
 
@@ -291,7 +291,7 @@ class BybitExecutor:
 
             try:
                 tp_order = self.place_tp_order(signal.direction, tp_qty, tp_price)
-                results['tps'].append({'tp': tp_num, 'order': tp_order})
+                results['tps'].append({'tp': tp_num, 'order': tp_order, 'price': tp_price})
                 logger.info("TP%d order placed: %s", tp_num, tp_order.get('id', 'unknown'))
             except Exception as e:
                 logger.warning("TP%d order failed: %s", tp_num, e)
