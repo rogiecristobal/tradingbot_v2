@@ -53,7 +53,8 @@ class BybitExecutor:
     def refresh_balance(self) -> float:
         balance = self.exchange.fetch_balance()
         usdt = balance.get('USDT', {})
-        self._wallet_balance = float(usdt.get('total', usdt.get('free', 0)))
+        raw = usdt.get('total') or usdt.get('free') or 0
+        self._wallet_balance = float(raw) if raw else 0.0
         return self._wallet_balance
 
     def set_leverage(self, leverage: int) -> None:
@@ -82,7 +83,8 @@ class BybitExecutor:
     def has_open_position(self, symbol_or_market: str) -> bool:
         positions = self.fetch_open_positions()
         for p in positions:
-            if p.get('symbol') == symbol_or_market and float(p.get('contracts', 0)) > 0:
+            cnt = p.get('contracts', 0)
+            if p.get('symbol') == symbol_or_market and (float(cnt) if cnt else 0) > 0:
                 return True
         return False
 

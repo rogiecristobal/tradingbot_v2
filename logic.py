@@ -8,6 +8,15 @@ import trades_logger
 
 logger = logging.getLogger(__name__)
 
+
+def _f(val, default=0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
 _executor: BybitExecutor | None = None
 _executor_lock = threading.Lock()
 
@@ -114,7 +123,7 @@ def format_execution_result(signal, result: dict, trade_id: str) -> str:
 def format_positions() -> tuple[str, list]:
     executor = get_executor()
     positions = executor.fetch_open_positions()
-    active = [p for p in positions if float(p.get('contracts', 0)) > 0]
+    active = [p for p in positions if _f(p.get('contracts', 0)) > 0]
 
     if not active:
         return "No open positions.", []
@@ -122,31 +131,31 @@ def format_positions() -> tuple[str, list]:
     open_orders = executor.fetch_open_orders()
     lines = ["📈 *Open Positions*", ""]
     keyboard = []
-    index = 0
 
     for p in active:
         sym = p.get('symbol', '?')
-        side = p.get('side', '?').upper()
-        contracts = float(p.get('contracts', 0))
-        entry_p = float(p.get('entryPrice', 0))
-        mark_p = float(p.get('markPrice', 0))
-        upnl = float(p.get('unrealizedPnl', 0))
-        lev = int(p.get('leverage', 1))
-        liq = float(p.get('liquidationPrice', 0))
+        side = p.get('side', '?').upper() if p.get('side') else '?'
+        contracts = _f(p.get('contracts', 0))
+        entry_p = _f(p.get('entryPrice', 0))
+        mark_p = _f(p.get('markPrice', 0))
+        upnl = _f(p.get('unrealizedPnl', 0))
+        lev = int(_f(p.get('leverage', 1)))
+        liq = _f(p.get('liquidationPrice', 0))
 
         lines.append(f"*{sym}*")
         lines.append(f"  {side} | Size: {contracts} | Lev: {lev}x")
         lines.append(f"  Entry: ${entry_p:.6f} | Mark: ${mark_p:.6f}")
         lines.append(f"  P&L: {'+' if upnl >= 0 else ''}${upnl:.2f}")
-        lines.append(f"  Liq: ${liq:.6f}")
+        if liq > 0:
+            lines.append(f"  Liq: ${liq:.6f}")
 
         sym_orders = [o for o in open_orders if o.get('symbol') == sym]
         tp_orders = [o for o in sym_orders if o.get('reduceOnly')]
         if tp_orders:
-            for o in sorted(tp_orders, key=lambda x: float(x.get('price', 0))):
-                rem = float(o.get('remaining', 0))
+            for o in sorted(tp_orders, key=lambda x: _f(x.get('price', 0))):
+                rem = _f(o.get('remaining', 0))
                 if rem > 0:
-                    lines.append(f"  TP @ ${float(o.get('price', 0)):.4f} ({rem} left)")
+                    lines.append(f"  TP @ ${_f(o.get('price', 0)):.4f} ({rem} left)")
         lines.append("")
 
         base = sym.split('/')[0].split(':')[0]
@@ -154,7 +163,6 @@ def format_positions() -> tuple[str, list]:
             keyboard.append([
                 {'text': f'🔒 Move SL to entry: {base}', 'callback_data': f'sl:{base}'}
             ])
-            index += 1
 
     return '\n'.join(lines), keyboard
 
@@ -177,8 +185,8 @@ def move_sl_to_entry(base_symbol: str) -> str:
     positions = executor.fetch_open_positions()
     for p in positions:
         sym = p.get('symbol', '')
-        if base_symbol.lower() in sym.lower() and float(p.get('contracts', 0)) > 0:
-            entry_p = float(p.get('entryPrice', 0))
+        if base_symbol.lower() in sym.lower() and _f(p.get('contracts', 0)) > 0:
+            entry_p = _f(p.get('entryPrice', 0))
             if entry_p > 0:
                 executor.set_stop_loss(entry_p, sym)
                 return f"✅ SL moved to entry (${entry_p:.4f}) for {sym}"
@@ -224,7 +232,7 @@ def watch_worker(bot_token: str, chat_id: str, trade_id: str) -> None:
             current = None
             for p in positions:
                 psym = p.get('symbol', '')
-                if base.lower() in psym.lower() and float(p.get('contracts', 0)) > 0:
+                if base.lower() in psym.lower() and _f(p.get('contracts', 0)) > 0:
                     current = p
                     break
 
@@ -233,9 +241,9 @@ def watch_worker(bot_token: str, chat_id: str, trade_id: str) -> None:
                 trades_logger.update_status(trade_id, 'closed')
                 return
 
-            current_qty = float(current.get('contracts', 0))
-            mark_p = float(current.get('markPrice', 0))
-            upnl = float(current.get('unrealizedPnl', 0))
+            current_qty = _f(current.get('contracts', 0))
+            mark_p = _f(current.get('markPrice', 0))
+            upnl = _f(current.get('unrealizedPnl', 0))
             reduction = 1 - (current_qty / original_qty) if original_qty > 0 else 0
 
             logger.info("Watch %s: qty=%.2f mark=%.6f P&L=%.2f reduction=%.0f%%",

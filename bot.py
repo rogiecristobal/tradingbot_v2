@@ -81,10 +81,13 @@ class CryptoBot:
             logger.info("[Bot] %s", msg)
 
     def _send(self, chat_id: str, text: str,
-              keyboard: list | None = None, parse_mode: str = 'Markdown') -> dict | None:
+              keyboard: list | None = None, parse_mode: str = 'Markdown',
+              reply_keyboard: list | None = None) -> dict | None:
         payload = {'chat_id': chat_id, 'text': text, 'parse_mode': parse_mode}
-        if keyboard:
+        if keyboard is not None:
             payload['reply_markup'] = json.dumps({'inline_keyboard': keyboard})
+        elif reply_keyboard is not None:
+            payload['reply_markup'] = json.dumps({'keyboard': reply_keyboard, 'resize_keyboard': True})
         return _api('sendMessage', payload)
 
     def _edit(self, chat_id: str, msg_id: int, text: str,
@@ -189,7 +192,8 @@ class CryptoBot:
                        "  /history — view trade history\n"
                        "  /watch — auto-move SL to entry after TP1\n"
                        "  /cancel — cancel pending trade\n"
-                       "  /help — this message")
+                       "  /help — this message",
+                       reply_keyboard=[['/positions', '/history'], ['/watch', '/cancel'], ['/help']])
 
         else:
             self._send(chat_id, f"Unknown command: {cmd}\nUse /help for available commands.")
