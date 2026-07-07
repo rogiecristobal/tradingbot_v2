@@ -74,8 +74,11 @@ class CryptoBot:
         self._started_ok = True
         logger.info("Bot initialized. Authorized chat: %s", self.chat_id)
 
-    def _log(self, msg: str):
-        logger.info("[Bot] %s", msg)
+    def _log(self, msg: str, *args):
+        if args:
+            logger.info("[Bot] " + msg, *args)
+        else:
+            logger.info("[Bot] %s", msg)
 
     def _send(self, chat_id: str, text: str,
               keyboard: list | None = None, parse_mode: str = 'Markdown') -> dict | None:
