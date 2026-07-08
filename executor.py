@@ -53,7 +53,7 @@ class BybitExecutor:
     def refresh_balance(self) -> float:
         balance = self.exchange.fetch_balance()
         usdt = balance.get('USDT', {})
-        raw = usdt.get('total') or usdt.get('free') or 0
+        raw = usdt.get('free') or 0
         self._wallet_balance = float(raw) if raw else 0.0
         return self._wallet_balance
 
@@ -63,10 +63,12 @@ class BybitExecutor:
         except Exception as e:
             logger.warning("Could not set leverage to %dx (might already be set): %s", leverage, e)
 
-    def calculate_qty(self, risk_pct: float, leverage: int, entry_price: float) -> float:
+    def calculate_qty(self, risk_pct: float, entry_price: float, sl_price: float) -> float:
         risk_amount = self._wallet_balance * risk_pct / 100.0
-        position_value = risk_amount * leverage
-        raw_qty = position_value / entry_price
+        sl_distance = abs(entry_price - sl_price)
+        if sl_distance <= 0:
+            return 0
+        raw_qty = risk_amount / sl_distance
         return self._get_precise_qty(raw_qty)
 
     def fetch_open_positions(self) -> list:
@@ -143,6 +145,7 @@ class BybitExecutor:
                 None,
                 {
                     'stopLoss': str(self._get_precise_price(sl_price)),
+                    'slTriggerBy': 'MarkPrice',
                     'positionIdx': 0,
                 },
             )
@@ -159,7 +162,7 @@ class BybitExecutor:
         self.exchange.private_post_v5_position_set_trading_stop({
             'symbol': market['id'],
             'stopLoss': str(self._get_precise_price(sl_price)),
-            'slTriggerBy': 'LastPrice',
+            'slTriggerBy': 'MarkPrice',
             'positionIdx': 0,
         })
 
@@ -175,19 +178,25 @@ class BybitExecutor:
         self.exchange.private_post_v5_position_set_trading_stop({
             'symbol': market['id'],
             'stopLoss': str(self._get_precise_price(sl_price)),
-            'slTriggerBy': 'LastPrice',
+            'slTriggerBy': 'MarkPrice',
             'positionIdx': 0,
         })
 
     def place_tp_order(self, side: str, qty: float, price: float) -> dict:
         tp_side = 'sell' if side == 'LONG' else 'buy'
-        return self.exchange.create_limit_order(
+        trigger_dir = 1 if side == 'LONG' else 2
+        precise_price = self._get_precise_price(price)
+        return self.exchange.create_order(
             self._market_id,
+            'limit',
             tp_side,
             qty,
-            self._get_precise_price(price),
+            precise_price,
             {
                 'reduceOnly': True,
+                'triggerPrice': str(precise_price),
+                'triggerBy': 'MarkPrice',
+                'triggerDirection': trigger_dir,
                 'positionIdx': 0,
             },
         )
@@ -205,16 +214,23 @@ class BybitExecutor:
         else:
             entry_price = float(signal.entry_type)
 
-        total_qty = self.calculate_qty(risk_pct, signal.leverage, entry_price)
+        total_qty = self.calculate_qty(risk_pct, entry_price, signal.sl_price)
         position_value = total_qty * entry_price
         margin_used = position_value / signal.leverage if signal.leverage else 0
 
         tps = []
         sorted_tps = sorted(signal.tp_prices.items())
+        allocated = 0.0
+        tp_count = len(sorted_tps)
         for idx, (tp_num, tp_price) in enumerate(sorted_tps):
             if idx >= len(TP_DISTRIBUTION):
                 break
-            pct = TP_DISTRIBUTION[idx]
+            is_last = (idx == tp_count - 1) or (idx == len(TP_DISTRIBUTION) - 1) or (idx == len(sorted_tps) - 1)
+            if is_last:
+                pct = max(0.0, 1.0 - allocated)
+            else:
+                pct = TP_DISTRIBUTION[idx]
+            allocated += pct
             tp_qty = self._get_precise_qty(total_qty * pct)
             if tp_qty > 0:
                 tps.append({'tp': tp_num, 'price': tp_price, 'qty': tp_qty, 'pct': pct})
@@ -264,7 +280,7 @@ class BybitExecutor:
         self._entry_price = entry_price
         logger.info("Entry price: %.8f", entry_price)
 
-        total_qty = self.calculate_qty(risk_pct, signal.leverage, entry_price)
+        total_qty = self.calculate_qty(risk_pct, entry_price, signal.sl_price)
         logger.info("Position qty: %s", total_qty)
 
         warnings = self.pre_flight_checks(signal, risk_pct, entry_price, total_qty)
@@ -278,11 +294,18 @@ class BybitExecutor:
                    'entry_price': entry_price, 'entry_qty': total_qty}
 
         sorted_tps = sorted(signal.tp_prices.items())
+        allocated = 0.0
+        tp_count = len(sorted_tps)
 
         for idx, (tp_num, tp_price) in enumerate(sorted_tps):
             if idx >= len(TP_DISTRIBUTION):
                 break
-            pct = TP_DISTRIBUTION[idx]
+            is_last = (idx == tp_count - 1) or (idx == len(TP_DISTRIBUTION) - 1) or (idx == len(sorted_tps) - 1)
+            if is_last:
+                pct = max(0.0, 1.0 - allocated)
+            else:
+                pct = TP_DISTRIBUTION[idx]
+            allocated += pct
             tp_qty_raw = total_qty * pct
             tp_qty = self._get_precise_qty(tp_qty_raw)
 
@@ -296,7 +319,6 @@ class BybitExecutor:
             except Exception as e:
                 logger.warning("TP%d order failed: %s", tp_num, e)
                 results['tps'].append({'tp': tp_num, 'error': str(e)})
-
         if signal.has_moon:
             logger.info("TP5 🚀 moon bag — no automatic order placed")
 
