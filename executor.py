@@ -145,6 +145,7 @@ class BybitExecutor:
                 None,
                 {
                     'stopLoss': str(self._get_precise_price(sl_price)),
+                    'slTriggerBy': 'MarkPrice',
                     'positionIdx': 0,
                 },
             )
@@ -196,6 +197,7 @@ class BybitExecutor:
                 'triggerPrice': str(precise_price),
                 'triggerBy': 'MarkPrice',
                 'triggerDirection': trigger_dir,
+                'tpSlType': 'Partial',
                 'positionIdx': 0,
             },
         )
