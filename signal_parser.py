@@ -18,7 +18,7 @@ _RE_DIRECTION = re.compile(r'^\s*(LONG|SHORT)\s*$', re.IGNORECASE)
 _RE_ENTRY = re.compile(r'entry\s*:\s*(.+)', re.IGNORECASE)
 _RE_TP = re.compile(r'TP\s*(\d+)\s*:\s*\$?\s*([\d.]+)', re.IGNORECASE)
 _RE_TP_MOON = re.compile(r'TP\s*(\d+)\s*:\s*(🚀)', re.IGNORECASE)
-_RE_SL = re.compile(r'stop\s*loss\s*:\s*\$?\s*([\d.]+)', re.IGNORECASE)
+_RE_SL = re.compile(r'stop\s*loss\s*[:=]\s*\$?\s*([\d.]+)', re.IGNORECASE)
 _RE_LEVERAGE = re.compile(r'(\d+)\s*x', re.IGNORECASE)
 _RE_RISK = re.compile(r'(\d+(?:\.\d+)?)\s*%\s*(?:margin|risk|of)', re.IGNORECASE)
 
@@ -127,7 +127,7 @@ def parse_signal(text: str) -> Signal | None:
 
     # Fallback multi-line regexes for values on the next line
     if signal.sl_price is None:
-        m = re.search(r'stop\s*loss\s*:\s*\$?\s*([\d.]+)', normal, re.IGNORECASE)
+        m = re.search(r'stop\s*loss\s*[:=]\s*\$?\s*([\d.]+)', normal, re.IGNORECASE)
         if m:
             signal.sl_price = float(m.group(1))
 
