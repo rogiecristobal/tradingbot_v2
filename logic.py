@@ -41,7 +41,7 @@ def compute_preview(signal_text: str) -> tuple | None:
     if signal is None:
         return None
 
-    risk = signal.risk_pct if signal.risk_pct is not None else float(os.getenv('RISK_PER_TRADE', '3'))
+    risk = signal.risk_pct if signal.risk_pct is not None else float(os.getenv('RISK_PER_TRADE', '1'))
     executor = get_executor()
     preview = executor.preview(signal, risk)
     return signal, preview, risk
@@ -80,7 +80,7 @@ def execute_trade(signal_text: str) -> tuple:
     if signal is None:
         raise ValueError("Could not parse signal")
 
-    risk = signal.risk_pct if signal.risk_pct is not None else float(os.getenv('RISK_PER_TRADE', '3'))
+    risk = signal.risk_pct if signal.risk_pct is not None else float(os.getenv('RISK_PER_TRADE', '1'))
     executor = get_executor()
     wallet_before = executor.wallet_balance
     result = executor.execute(signal, risk)

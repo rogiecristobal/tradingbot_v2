@@ -145,7 +145,6 @@ class BybitExecutor:
                 None,
                 {
                     'stopLoss': str(self._get_precise_price(sl_price)),
-                    'slTriggerBy': 'MarkPrice',
                     'positionIdx': 0,
                 },
             )
@@ -258,7 +257,7 @@ class BybitExecutor:
         info['symbol'] = signal.symbol
         return info
 
-    def execute(self, signal, risk_pct: float = 3.0) -> dict:
+    def execute(self, signal, risk_pct: float = 1.0) -> dict:
         from signal_parser import TP_DISTRIBUTION
 
         market_id = self._resolve_market(signal.symbol)
