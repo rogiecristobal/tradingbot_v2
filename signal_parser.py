@@ -22,7 +22,7 @@ _RE_SL = re.compile(r'stop\s*loss\s*[:=]\s*\$?\s*([\d.]+)', re.IGNORECASE)
 _RE_LEVERAGE = re.compile(r'(\d+)\s*x', re.IGNORECASE)
 _RE_RISK = re.compile(r'(\d+(?:\.\d+)?)\s*%\s*(?:margin|risk|of)', re.IGNORECASE)
 
-TP_DISTRIBUTION = [0.40, 0.30, 0.20, 0.10]
+TP_WEIGHTS = [4, 3, 2, 1]
 
 
 class Signal:
@@ -55,8 +55,14 @@ class Signal:
             f"Direction: {self.direction}",
             f"Entry:     {self.entry_type}",
         ]
+        tp_count = len(self.tp_prices)
+        weights = list(TP_WEIGHTS)
+        while len(weights) < tp_count:
+            weights.append(weights[-1])
+        weights = weights[:tp_count]
+        total_weight = sum(weights)
         for idx, price in sorted(self.tp_prices.items()):
-            pct = int(TP_DISTRIBUTION[idx - 1] * 100) if idx <= len(TP_DISTRIBUTION) else 0
+            pct = int(weights[idx - 1] / total_weight * 100)
             lines.append(f"  TP{idx}: ${price} ({pct}%)")
         if self.has_moon:
             lines.append(f"  TP{self.tp_count}: 🚀 (no auto-close)")

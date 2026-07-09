@@ -203,7 +203,7 @@ class BybitExecutor:
         )
 
     def _compute(self, signal, risk_pct: float) -> dict:
-        from signal_parser import TP_DISTRIBUTION
+        from signal_parser import TP_WEIGHTS
 
         market_id = self._resolve_market(signal.symbol)
 
@@ -223,14 +223,17 @@ class BybitExecutor:
         sorted_tps = sorted(signal.tp_prices.items())
         allocated = 0.0
         tp_count = len(sorted_tps)
+        weights = list(TP_WEIGHTS)
+        while len(weights) < tp_count:
+            weights.append(weights[-1])
+        weights = weights[:tp_count]
+        total_weight = sum(weights)
         for idx, (tp_num, tp_price) in enumerate(sorted_tps):
-            if idx >= len(TP_DISTRIBUTION):
-                break
-            is_last = (idx == tp_count - 1) or (idx == len(TP_DISTRIBUTION) - 1) or (idx == len(sorted_tps) - 1)
+            is_last = (idx == tp_count - 1)
             if is_last:
                 pct = max(0.0, 1.0 - allocated)
             else:
-                pct = TP_DISTRIBUTION[idx]
+                pct = weights[idx] / total_weight
             allocated += pct
             tp_qty = self._get_precise_qty(total_qty * pct)
             if tp_qty > 0:
@@ -260,7 +263,7 @@ class BybitExecutor:
         return info
 
     def execute(self, signal, risk_pct: float = 1.0) -> dict:
-        from signal_parser import TP_DISTRIBUTION
+        from signal_parser import TP_WEIGHTS
 
         market_id = self._resolve_market(signal.symbol)
         logger.info("Market resolved: %s", market_id)
@@ -297,15 +300,18 @@ class BybitExecutor:
         sorted_tps = sorted(signal.tp_prices.items())
         allocated = 0.0
         tp_count = len(sorted_tps)
+        weights = list(TP_WEIGHTS)
+        while len(weights) < tp_count:
+            weights.append(weights[-1])
+        weights = weights[:tp_count]
+        total_weight = sum(weights)
 
         for idx, (tp_num, tp_price) in enumerate(sorted_tps):
-            if idx >= len(TP_DISTRIBUTION):
-                break
-            is_last = (idx == tp_count - 1) or (idx == len(TP_DISTRIBUTION) - 1) or (idx == len(sorted_tps) - 1)
+            is_last = (idx == tp_count - 1)
             if is_last:
                 pct = max(0.0, 1.0 - allocated)
             else:
-                pct = TP_DISTRIBUTION[idx]
+                pct = weights[idx] / total_weight
             allocated += pct
             tp_qty_raw = total_qty * pct
             tp_qty = self._get_precise_qty(tp_qty_raw)

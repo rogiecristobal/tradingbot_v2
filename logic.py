@@ -2,7 +2,7 @@ import os
 import logging
 import threading
 import time
-from signal_parser import parse_signal, TP_DISTRIBUTION
+from signal_parser import parse_signal
 from executor import BybitExecutor
 import trades_logger
 
