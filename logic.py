@@ -221,7 +221,7 @@ def watch_worker(bot_token: str, chat_id: str, trade_id: str) -> None:
     sym = target['symbol']
     base = sym.split('/')[0].split(':')[0]
     entry_price = target.get('entry_price', 0)
-    original_qty = target.get('quantity', 0)
+    original_qty = _f(target.get('quantity'))
 
     if entry_price <= 0:
         _send_telegram(bot_token, chat_id, "❌ No entry price recorded for this trade.")

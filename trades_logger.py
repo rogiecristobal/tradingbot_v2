@@ -41,7 +41,7 @@ def log_trade(signal, result, risk_pct: float, wallet_balance: float) -> str:
             })
 
     fill_price = entry.get('price') or result.get('entry_price', 0)
-    fill_qty = entry.get('filled') or entry.get('amount', 0)
+    fill_qty = entry.get('filled') or entry.get('amount') or 0
 
     trade_record = {
         'id': trade_id,

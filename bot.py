@@ -158,18 +158,18 @@ class CryptoBot:
             if not trades:
                 self._send(chat_id, "No active trades to watch.")
                 return
-            latest = trades[-1]
-            trade_id = latest['id']
-            sym = latest['symbol']
-            self._log("Starting watch for %s (%s)", sym, trade_id)
-
-            t = threading.Thread(
-                target=logic.watch_worker,
-                args=(self.token, chat_id, trade_id),
-                daemon=True,
-            )
-            t.start()
-            self._send(chat_id, f"👀 Watching {sym} in background...")
+            started = 0
+            for t_data in trades:
+                trade_id = t_data['id']
+                sym = t_data['symbol']
+                self._log("Starting watch for %s (%s)", sym, trade_id)
+                threading.Thread(
+                    target=logic.watch_worker,
+                    args=(self.token, chat_id, trade_id),
+                    daemon=True,
+                ).start()
+                started += 1
+            self._send(chat_id, f"👀 Watching {started} position(s) in background...")
 
         elif cmd == '/cancel':
             if self._pending_signal:
@@ -218,7 +218,12 @@ class CryptoBot:
                 signal, result, trade_id = logic.execute_trade(text)
                 msg = logic.format_execution_result(signal, result, trade_id)
                 self._edit(chat_id, msg_id, msg)
-                self._log("Trade executed: %s %s", signal.symbol, signal.direction)
+                threading.Thread(
+                    target=logic.watch_worker,
+                    args=(self.token, chat_id, trade_id),
+                    daemon=True,
+                ).start()
+                self._log("Trade executed: %s %s (auto-watch started)", signal.symbol, signal.direction)
             except Exception as e:
                 self._edit(chat_id, msg_id, f"❌ Trade failed: {e}")
                 logger.exception("Execute error")
